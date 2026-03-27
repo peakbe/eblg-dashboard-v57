@@ -13,19 +13,27 @@ const EBLG = { lat:50.6374, lon:5.4432, runways:[
   { name:"22", heading:220 }
 ]};
 
+function formatLocal(t) {
+  if (!t) return "-";
+  return new Date(t).toLocaleTimeString("fr-BE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Brussels"
+  });
+}
+
 function minutesFromNow(time) {
   if (!time) return "-";
-
   const now = new Date();
   const t = new Date(time);
+  const diffMin = Math.round((t - now) / 60000);
 
-  const diffMs = t - now;
-  const diffMin = Math.round(diffMs / 60000);
-
-  if (diffMin < -5) return `il y a ${Math.abs(diffMin)} min`;   // passé
+  if (diffMin < -5) return `il y a ${Math.abs(diffMin)} min`;
   if (diffMin < 1) return "maintenant";
   return `dans ${diffMin} min`;
 }
+
 
 function isDelayed(v) {
   const sched = v.sTx || v.scheduled;
@@ -40,6 +48,7 @@ function isDelayed(v) {
 
   return false;
 }
+
 
 let runwayAxisLayer = null;
 let runwayAxisArrow = null;
@@ -67,6 +76,11 @@ function drawRunwayAxis(runwayName, phase) {
     start = RW04;
     end = RW22;
   }
+
+   function flightColor(v) {
+  if (v.flightPax && v.flightPax.startsWith("C")) return "#0ea5e9"; // Cargo
+  return "#10b981"; // Pax
+}
 
   // Couleur selon phase
   const color = (phase === "Décollage") ? "#f97316" : "#60a5fa";
@@ -238,11 +252,13 @@ function updateFlightsUI(f) {
   html += "<strong>Arrivées</strong><br>";
   f.arrivals.forEach(v => {
     const delayed = isDelayed(v);
+    const color = flightColor(v);
+
     html += `
-      <div class="flight-row" style="color:${delayed ? '#b91c1c' : 'inherit'};">
-        ARR ${v.flightPax || v.flight} (${v.aircraftType || "-"}) – RWY ${v.runway || "?"}<br>
-        STA: ${format(v.sTx)} – ETA: ${format(v.eTx)} (${minutesFromNow(v.eTx)})<br>
-        ATA: ${format(v.aTx)}
+      <div class="flight-row" style="border-left:4px solid ${color}; padding-left:6px; margin-bottom:6px;">
+        <strong>${v.flightPax || v.flight}</strong> → ${formatLocal(v.eTx)} 
+        <span style="color:#6b7280;">(${minutesFromNow(v.eTx)})</span>
+        ${delayed ? `<span style="color:#b91c1c; font-weight:bold;"> RETARD</span>` : ""}
       </div>
     `;
   });
@@ -253,17 +269,20 @@ function updateFlightsUI(f) {
   html += "<strong>Départs</strong><br>";
   f.departures.forEach(v => {
     const delayed = isDelayed(v);
+    const color = flightColor(v);
+
     html += `
-      <div class="flight-row" style="color:${delayed ? '#b91c1c' : 'inherit'};">
-        DEP ${v.flightPax || v.flight} (${v.aircraftType || "-"}) – RWY ${v.runway || "?"}<br>
-        STD: ${format(v.sTx)} – ETD: ${format(v.eTx)} (${minutesFromNow(v.eTx)})<br>
-        ATD: ${format(v.aTx)}
+      <div class="flight-row" style="border-left:4px solid ${color}; padding-left:6px; margin-bottom:6px;">
+        <strong>${v.flightPax || v.flight}</strong> → ${formatLocal(v.eTx)} 
+        <span style="color:#6b7280;">(${minutesFromNow(v.eTx)})</span>
+        ${delayed ? `<span style="color:#b91c1c; font-weight:bold;"> RETARD</span>` : ""}
       </div>
     `;
   });
 
   el.innerHTML = html;
 }
+
 
 
 function format(t) {
