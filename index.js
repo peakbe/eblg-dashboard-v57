@@ -75,6 +75,35 @@ app.get("/taf", async (req, res) => {
 });
 
 /* ----------------------------------------------------------
+   FIDS AVEC FALLBACK
+---------------------------------------------------------- */
+app.get("/fids", async (req, res) => {
+  try {
+    // Remplace cette URL par ta vraie source FIDS quand tu l'auras
+    const response = await fetch("https://opensky-network.org/api/flights/departure?airport=EBLG&begin=0&end=0");
+
+    if (!response.ok) throw new Error("FIDS offline");
+
+    const data = await response.json();
+    return res.json(data);
+
+  } catch (error) {
+    console.error("FIDS DOWN → fallback activé");
+
+    return res.json([
+      {
+        flight: "N/A",
+        destination: "N/A",
+        time: "N/A",
+        status: "Unavailable",
+        fallback: true,
+        timestamp: new Date().toISOString()
+      }
+    ]);
+  }
+});
+
+/* ----------------------------------------------------------
    DÉMARRAGE DU SERVEUR (MANQUAIT !)
 ---------------------------------------------------------- */
 const PORT = process.env.PORT || 10000;
